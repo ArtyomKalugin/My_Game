@@ -51,6 +51,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.line_clear.clicked.connect(self.clearLineCoords)
 
+        self.ell_choose_check = False
+        self.ell_choose.clicked.connect(self.runEllipse)
+
+        self.mouse_pos_ell = None
+        self.mouse_stcoords_ell = None
+        self.amountell = 0
+        self.mouse_coords_ell = [[]]
+
+        self.set_color_ell.clicked.connect(self.setColorEllipse)
+        self.all_colors_ell = [[]]
+        self.ell_color = QColor(0, 0, 0)
+
+        self.set_size_ell.clicked.connect(self.setSizeEllipse)
+        self.ell_size = 1
+
+        self.set_nocolor_ell.clicked.connect(self.setNoColorEllipse)
+        self.ell_nocolor = False
+
+        self.ell_clear.clicked.connect(self.clearEllipseCoords)
+
     def clearCoords(self):
         self.mouse_coords = [[]]
         pen = QPen(QColor(self.pencil_color), self.pencil_size)
@@ -76,9 +96,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.mouse_pos_line = event.pos()
             self.update()
 
+        if self.ell_choose_check:
+            self.mouse_pos_ell = event.pos()
+            self.update()
+
     def mousePressEvent(self, event):
         if self.line_choose_check:
             self.mouse_stcoords_line = event.pos()
+
+        if self.ell_choose_check:
+            self.mouse_stcoords_ell = event.pos()
 
     def mouseReleaseEvent(self, event):
         if self.pencil_choose_check:
@@ -93,11 +120,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             y_start = self.mouse_stcoords_line.y()
             pen = QPen(QColor(self.line_color), self.line_size)
             self.all_colors_line[self.amountline].append(pen)
-            self.mouse_coords_line[self.amountline].append((x, y, x_start, y_start))
+            self.mouse_coords_line[self.amountline].append((x_start, y_start, x, y))
 
             self.mouse_coords_line.append([])
             self.all_colors_line.append([])
             self.amountline += 1
+            self.update()
+
+        if self.ell_choose_check:
+            x = self.mouse_pos_ell.x()
+            y = self.mouse_pos_ell.y()
+            x_start = self.mouse_stcoords_ell.x()
+            y_start = self.mouse_stcoords_ell.y()
+            if self.ell_nocolor:
+                pen = ('No', self.ell_size)
+            else:
+                pen = (QColor(self.ell_color), self.ell_size)
+            self.all_colors_ell[self.amountell].append(pen)
+            self.mouse_coords_ell[self.amountell].append((x_start, y_start, x, y))
+
+            self.mouse_coords_ell.append([])
+            self.all_colors_ell.append([])
+            self.amountell += 1
             self.update()
 
     def paintEvent(self, event):
@@ -132,10 +176,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     elem = self.mouse_coords_line[j][i]
                     picture.drawLine(elem[0], elem[1], elem[2], elem[3])
 
+        if self.ell_choose_check:
+            x = self.mouse_pos_ell.x()
+            y = self.mouse_pos_ell.y()
+            x_start = self.mouse_stcoords_ell.x()
+            y_start = self.mouse_stcoords_ell.y()
+
+            picture.setPen(QPen(Qt.black, 1, Qt.DashLine))
+            picture.drawEllipse(x_start, y_start, x, y)
+            for j in range(len(self.mouse_coords_ell)):
+                for i in range(len(self.mouse_coords_ell[j])):
+                    pen = QPen(Qt.black, self.all_colors_ell[j][i][1])
+                    picture.setPen(pen)
+                    if self.all_colors_ell[j][i][0] == 'No':
+                        picture.setBrush(Qt.NoBrush)
+                    else:
+                        picture.setBrush(QBrush(self.all_colors_ell[j][i][0]))
+                    elem = self.mouse_coords_ell[j][i]
+                    picture.drawEllipse(elem[0], elem[1], elem[2], elem[3])
+
     def runPencil(self):
         self.pencil_choose_check = True
         self.rainbow_choose_check = False
         self.line_choose_check = False
+        self.figure_choose_check = False
 
     def runRainbow(self):
         self.rainbow_choose_check = True
@@ -161,6 +225,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.line_choose_check = True
         self.pencil_choose_check = False
         self.rainbow_choose_check = False
+        self.figure_choose_check = False
 
     def setColorLine(self):
         color = QColorDialog.getColor()
@@ -186,14 +251,41 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.amountline = 0
         self.update()
 
-    def enterEvent(self, event):
-        self.frame_color = Qt.darkCyan
+    def runEllipse(self):
+        self.ell_choose_check = True
+        self.line_choose_check = False
+        self.pencil_choose_check = False
+        self.rainbow_choose_check = False
 
-        self.update()
+    def setColorEllipse(self):
+        self.ell_nocolor = False
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.set_color_ell.setStyleSheet(
+                "background-color: {}".format(color.name())
+            )
 
-    def leaveEvent(self, event):
-        self.frame_color = Qt.darkGreen
+            self.ell_color = color.name()
 
+    def setSizeEllipse(self):
+        size, okBtnPressed = QInputDialog.getInt(
+            self, "Толщина эллипса", "Выберите толщину:", 1, 1, 20, 1
+        )
+        if okBtnPressed:
+            self.ell_size = size
+            self.set_size_ell.setText('Толщина: ' + str(size))
+
+    def setNoColorEllipse(self):
+        self.ell_nocolor = True
+
+    def clearEllipseCoords(self):
+        self.mouse_coords_ell = [[]]
+        if self.ell_nocolor:
+            pen = ('No', self.ell_size)
+        else:
+            pen = (QColor(self.ell_color), self.ell_size)
+        self.all_colors_ell = [[pen]]
+        self.amountell = 0
         self.update()
 
 
