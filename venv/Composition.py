@@ -11,7 +11,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.initUI()
 
+    def initUI(self):
         self.setWindowTitle('Perfomance Alpha')
         #self.setStyleSheet("background-color: blue;")
 
@@ -91,6 +93,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.rect_clear.clicked.connect(self.clearRectangleCoords)
 
+        self.text_x = None
+        self.text_y = None
+
+        self.text_choose_check = False
+        self.text = None
+        self.text_choose.clicked.connect(self.runText)
+
+        self.set_color_text.clicked.connect(self.setColorText)
+        self.all_colors_text = []
+        self.text_color = QColor(0, 0, 0)
+
+        self.set_size_text.clicked.connect(self.setSizeText)
+        self.text_size = 10
+
+        self.text_clear.clicked.connect(self.clearText)
+
     def clearCoords(self):
         self.mouse_coords = [[]]
         pen = QPen(QColor(self.pencil_color), self.pencil_size)
@@ -99,40 +117,71 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update()
 
     def mouseMoveEvent(self, event):
+        self.label_coords.setText(
+            'Координаты: %d : %d' % (event.x(), event.y()))
+
         if self.pencil_choose_check:
-            self.mouse_coords[self.amount].append((event.x(), event.y()))
-            self.update()
-            if self.rainbow_choose_check:
-                r = choice(range(256))
-                g = choice(range(256))
-                b = choice(range(256))
-                color = QPen(QColor(r, g, b), self.pencil_size)
-                self.all_colors_pencil[self.amount].append(color)
-            else:
-                pen = QPen(QColor(self.pencil_color), self.pencil_size)
-                self.all_colors_pencil[self.amount].append(pen)
+            if event.y() > 150:
+                self.mouse_coords[self.amount].append((event.x(), event.y()))
+                self.update()
+                if self.rainbow_choose_check:
+                    r = choice(range(256))
+                    g = choice(range(256))
+                    b = choice(range(256))
+                    color = QPen(QColor(r, g, b), self.pencil_size)
+                    self.all_colors_pencil[self.amount].append(color)
+                else:
+                    pen = QPen(QColor(self.pencil_color), self.pencil_size)
+                    self.all_colors_pencil[self.amount].append(pen)
 
         if self.line_choose_check:
-            self.mouse_pos_line = event.pos()
-            self.update()
+            if event.y() > 150:
+                self.mouse_pos_line = event.pos()
+                self.update()
 
         if self.ell_choose_check:
-            self.mouse_pos_ell = event.pos()
-            self.update()
+            if event.y() > 150:
+                self.mouse_pos_ell = event.pos()
+                self.update()
 
         if self.rect_choose_check:
-            self.mouse_pos_rect = event.pos()
-            self.update()
+            if event.y() > 150:
+                self.mouse_pos_rect = event.pos()
+                self.update()
 
     def mousePressEvent(self, event):
         if self.line_choose_check:
-            self.mouse_stcoords_line = event.pos()
+            if event.y() > 150:
+                self.mouse_stcoords_line = event.pos()
 
         if self.ell_choose_check:
-            self.mouse_stcoords_ell = event.pos()
+            if event.y() > 150:
+                self.mouse_stcoords_ell = event.pos()
 
         if self.rect_choose_check:
-            self.mouse_stcoords_rect = event.pos()
+            if event.y() > 150:
+                self.mouse_stcoords_rect = event.pos()
+
+        if self.text_choose_check:
+            if event.y() > 150:
+                size_x, okBtnPressed_x = QInputDialog.getInt(
+                    self, "Размер текста по оси x", "Введите размер по x:", 1
+                )
+                if okBtnPressed_x:
+                    self.text_x = size_x
+
+                    size_y, okBtnPressed_y = QInputDialog.getInt(
+                        self, "Размер текста по оси y", "Введите размер по y:", 1
+                    )
+                    if okBtnPressed_y:
+                        self.text_y = size_y
+
+                self.all_colors_text.append((QColor(self.text_color),
+                                             self.text_size,
+                                             self.text, self.text_x,
+                                             self.text_y,
+                                             event.pos().x(),
+                                             event.pos().y()))
 
     def mouseReleaseEvent(self, event):
         if self.pencil_choose_check:
@@ -155,21 +204,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.update()
 
         if self.ell_choose_check:
-            x = self.mouse_pos_ell.x()
-            y = self.mouse_pos_ell.y()
-            x_start = self.mouse_stcoords_ell.x()
-            y_start = self.mouse_stcoords_ell.y()
-            if self.ell_nocolor:
-                pen = ('No', self.ell_size)
-            else:
-                pen = (QColor(self.ell_color), self.ell_size)
-            self.all_colors_ell[self.amountell].append(pen)
-            self.mouse_coords_ell[self.amountell].append((x_start, y_start, x, y))
+            if event.y() in range(150, 841):
+                x = self.mouse_pos_ell.x()
+                y = self.mouse_pos_ell.y()
+                x_start = self.mouse_stcoords_ell.x()
+                y_start = self.mouse_stcoords_ell.y()
+                if self.ell_nocolor:
+                    pen = ('No', self.ell_size)
+                else:
+                    pen = (QColor(self.ell_color), self.ell_size)
+                self.all_colors_ell[self.amountell].append(pen)
+                self.mouse_coords_ell[self.amountell].append((x_start, y_start, x, y))
 
-            self.mouse_coords_ell.append([])
-            self.all_colors_ell.append([])
-            self.amountell += 1
-            self.update()
+                self.mouse_coords_ell.append([])
+                self.all_colors_ell.append([])
+                self.amountell += 1
+                self.update()
 
         if self.rect_choose_check:
             x = self.mouse_pos_rect.x()
@@ -187,7 +237,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.all_colors_rect.append([])
             self.amountrect += 1
             self.update()
-            print(1)
 
     def paintEvent(self, event):
         picture = QPainter()
@@ -259,12 +308,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     elem = self.mouse_coords_rect[j][i]
                     picture.drawRect(elem[0], elem[1], elem[2], elem[3])
 
+        if self.text_choose_check:
+            for elem in self.all_colors_text:
+                picture.setPen(elem[0])
+                picture.setFont(QFont('Decorative', elem[1]))
+                picture.drawText(elem[5], elem[6], elem[3], elem[4], Qt.AlignCenter, elem[2])
+
     def runPencil(self):
         self.pencil_choose_check = True
         self.rainbow_choose_check = False
         self.line_choose_check = False
-        self.figure_choose_check = False
+        self.ell_choose_check = False
         self.rect_choose_check = False
+        self.text_choose_check = False
 
     def runRainbow(self):
         self.rainbow_choose_check = True
@@ -290,8 +346,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.line_choose_check = True
         self.pencil_choose_check = False
         self.rainbow_choose_check = False
-        self.figure_choose_check = False
+        self.ell_choose_check = False
         self.rect_choose_check = False
+        self.text_choose_check = False
 
     def setColorLine(self):
         color = QColorDialog.getColor()
@@ -323,6 +380,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pencil_choose_check = False
         self.rainbow_choose_check = False
         self.rect_choose_check = False
+        self.text_choose_check = False
 
     def setColorEllipse(self):
         self.ell_nocolor = False
@@ -361,6 +419,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.line_choose_check = False
         self.pencil_choose_check = False
         self.rainbow_choose_check = False
+        self.text_choose_check = False
 
     def setColorRectangle(self):
         self.rect_nocolor = False
@@ -391,6 +450,40 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pen = (QColor(self.rect_color), self.rect_size)
         self.all_colors_rect = [[pen]]
         self.amountrect = 0
+        self.update()
+
+    def runText(self):
+        text, okBtnPressed = QInputDialog.getText(
+            self, "Текст", "Введите текст"
+        )
+        if okBtnPressed:
+            self.text = text
+            self.text_choose_check = True
+            self.rect_choose_check = False
+            self.ell_choose_check = False
+            self.line_choose_check = False
+            self.pencil_choose_check = False
+            self.rainbow_choose_check = False
+
+    def setColorText(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.set_color_text.setStyleSheet(
+                "background-color: {}".format(color.name())
+            )
+
+            self.text_color = color.name()
+
+    def setSizeText(self):
+        size, okBtnPressed = QInputDialog.getInt(
+            self, "Толщина текста", "Выберите толщину:", 10, 1, 50, 1
+        )
+        if okBtnPressed:
+            self.text_size = size
+            self.set_size_text.setText('Толщина: ' + str(size))
+
+    def clearText(self):
+        self.all_colors_text = []
         self.update()
 
 
