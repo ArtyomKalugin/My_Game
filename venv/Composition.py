@@ -16,6 +16,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def initUI(self):
         self.setWindowTitle('Perfomance Alpha')
         #self.setStyleSheet("background-color: blue;")
+        #Something
 
         self.mouse_coords = [[]]
         self.amount = 0
