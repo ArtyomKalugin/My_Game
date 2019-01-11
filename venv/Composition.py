@@ -184,7 +184,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.text_x = size_x
 
                     size_y, okBtnPressed_y = QInputDialog.getInt(
-                        self, "Размер текста по оси y", "Введите размер по y:", 1
+                        self, "Размер текста по оси y",
+                        "Введите размер по y:", 1
                     )
                     if okBtnPressed_y:
                         self.text_y = size_y
@@ -209,7 +210,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             y_start = self.mouse_stcoords_line.y()
             pen = QPen(QColor(self.line_color), self.line_size)
             self.all_colors_line[self.amountline].append(pen)
-            self.mouse_coords_line[self.amountline].append((x_start, y_start, x, y))
+            self.mouse_coords_line[self.amountline].append((x_start,
+                                                            y_start,
+                                                            x, y))
 
             self.mouse_coords_line.append([])
             self.all_colors_line.append([])
@@ -225,9 +228,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pen = ('No', self.ell_size, QColor(self.ell_contcolor))
             else:
                 pen = (QColor(self.ell_color), self.ell_size,
-                        QColor(self.ell_contcolor))
+                       QColor(self.ell_contcolor))
             self.all_colors_ell[self.amountell].append(pen)
-            self.mouse_coords_ell[self.amountell].append((x_start, y_start, x, y))
+            self.mouse_coords_ell[self.amountell].append((x_start,
+                                                          y_start,
+                                                          x, y))
 
             self.mouse_coords_ell.append([])
             self.all_colors_ell.append([])
@@ -245,7 +250,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pen = (QColor(self.rect_color), self.rect_size,
                        QColor(self.rect_contcolor))
             self.all_colors_rect[self.amountrect].append(pen)
-            self.mouse_coords_rect[self.amountrect].append((x_start, y_start, x, y))
+            self.mouse_coords_rect[self.amountrect].append((x_start,
+                                                            y_start,
+                                                            x, y))
 
             self.mouse_coords_rect.append([])
             self.all_colors_rect.append([])
@@ -268,9 +275,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         elem = self.mouse_coords[j][i]
                         if i != 0:
                             elemlast = self.mouse_coords[j][i - 1]
-                            picture.drawLine(elemlast[0], elemlast[1], elem[0], elem[1])
+                            picture.drawLine(elemlast[0], elemlast[1],
+                                             elem[0], elem[1])
                         else:
-                            picture.drawLine(elem[0], elem[1], elem[0], elem[1])
+                            picture.drawLine(elem[0], elem[1],
+                                             elem[0], elem[1])
 
             if figure == 'Line':
                 x = self.mouse_pos_line.x()
@@ -297,12 +306,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 picture.drawEllipse(x_start, y_start, x, y)
                 for j in range(len(self.mouse_coords_ell)):
                     for i in range(len(self.mouse_coords_ell[j])):
-                        pen = QPen(self.all_colors_ell[j][i][2], self.all_colors_ell[j][i][1])
+                        pen = QPen(self.all_colors_ell[j][i][2],
+                                   self.all_colors_ell[j][i][1])
                         picture.setPen(pen)
                         if self.all_colors_ell[j][i][0] == 'No':
                             picture.setBrush(Qt.NoBrush)
                         else:
-                            picture.setBrush(QBrush(self.all_colors_ell[j][i][0]))
+                            brush = QBrush(self.all_colors_ell[j][i][0])
+                            picture.setBrush(brush)
                         elem = self.mouse_coords_ell[j][i]
                         picture.drawEllipse(elem[0], elem[1], elem[2], elem[3])
 
@@ -317,12 +328,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 picture.drawRect(x_start, y_start, x, y)
                 for j in range(len(self.mouse_coords_rect)):
                     for i in range(len(self.mouse_coords_rect[j])):
-                        pen = QPen(self.all_colors_rect[j][i][2], self.all_colors_rect[j][i][1])
+                        pen = QPen(self.all_colors_rect[j][i][2],
+                                   self.all_colors_rect[j][i][1])
                         picture.setPen(pen)
                         if self.all_colors_rect[j][i][0] == 'No':
                             picture.setBrush(Qt.NoBrush)
                         else:
-                            picture.setBrush(QBrush(self.all_colors_rect[j][i][0]))
+                            brush = QBrush(self.all_colors_rect[j][i][0])
+                            picture.setBrush(brush)
                         elem = self.mouse_coords_rect[j][i]
                         picture.drawRect(elem[0], elem[1], elem[2], elem[3])
 
@@ -330,7 +343,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 for elem in self.all_colors_text:
                     picture.setPen(elem[0])
                     picture.setFont(QFont('Decorative', elem[1]))
-                    picture.drawText(elem[5], elem[6], elem[3], elem[4], Qt.AlignCenter, elem[2])
+                    picture.drawText(elem[5], elem[6], elem[3],
+                                     elem[4], Qt.AlignCenter, elem[2])
 
     def drawScene(self, picture):   # Рисование какой-либо сцены
         if self.scene == 'Горы':
@@ -559,7 +573,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.all_colors_text = []
         self.update()
 
-    def clearAll(self): # Очищение всего; не происходит вызова метода initUI(), так как необходимо сохранить цвета и прочее
+    def clearAll(self):
+        # Очищение всего; не происходит вызова метода initUI()
+        # так как необходимо сохранить цвета и прочее
         self.ell_choose_check = False
         self.line_choose_check = False
         self.pencil_choose_check = False
