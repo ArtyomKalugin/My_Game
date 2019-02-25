@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+import random
 
 
 def start_screen():
