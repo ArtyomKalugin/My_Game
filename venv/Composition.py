@@ -1,7 +1,6 @@
 import pygame
 import os
 import sys
-import random
 
 
 def start_screen():
@@ -9,7 +8,7 @@ def start_screen():
                   "Правила игры:",
                   "Передвигаться с помощью стрелок"]
 
-    fon = pygame.transform.scale(load_image('boom.png'), (x * 20, y * 20))
+    fon = pygame.transform.scale(load_image('boom.png'), (5 * 20, 5 * 20))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font("C:/Windows/Fonts/Arial.ttf", 30)
     text_coord = 50
@@ -60,7 +59,7 @@ def play_level_first():
                 for sprite in heroes:
                     sprite.hinderer(event.pos)
 
-                if event.pos[0] in range(650, 730) and event.pos[1] in range(515, 595):
+                if event.pos[0] in range(400, 480) and event.pos[1] in range(515, 595):
                     to_boom = True
 
                     to_dig = False
@@ -113,9 +112,9 @@ def play_level_first():
                 if heroes_count <= 10:
                     for elem in starts:
                         pos = elem.give_pos()
-                        Lemming(pos)
+                        Lemming((pos[0] + 1, pos[1]), load_image("lemmings.png", color_key=-1), 10, 1)
                     timing = 0
-
+            starts.update(x)
             heroes.update(x)
             digger_menu.update()
             booms_menu.update()
@@ -168,7 +167,7 @@ def play_level_second():
                 for sprite in heroes:
                     sprite.hinderer(event.pos)
 
-                if event.pos[0] in range(650, 730) and event.pos[1] in range(515, 595):
+                if event.pos[0] in range(400, 480) and event.pos[1] in range(515, 595):
                     to_boom = True
 
                     to_dig = False
@@ -229,6 +228,7 @@ def play_level_second():
             booms_menu.update()
             parachutes_menu.update()
             hinders_menu.update()
+            starts.update(x)
 
             time -= 0.01
 
@@ -262,10 +262,15 @@ def load_level(filename):
         raise SystemExit(message)
 
 
-def load_image(name):
+def load_image(name, color_key=None):
     fullname = os.path.join('data', name)
     try:
         image = pygame.image.load(fullname)
+        if color_key is not None:
+            if color_key == -1:
+                color_key = image.get_at((0, 0))
+            image.set_colorkey(color_key)
+        image = image.convert_alpha()
     except pygame.error as message:
         print('Cannot load image:', name)
         raise SystemExit(message)
@@ -284,15 +289,13 @@ def generate_level(level):
             if level[y][x] == '#':
                 Platform((x, y))
             elif level[y][x] == '1':
-                Start((x, y))
+                Start((x, y), load_image("start.png", color_key=-1), 1, 10)
             elif level[y][x] == '2':
                 Finish((x, y))
             elif level[y][x] == '.':
                 Space((x, y))
             elif level[y][x] == '@':
                 Grass((x, y))
-            elif level[y][x] == '/':
-                Nothing((x, y))
     return x, y
 
 
@@ -357,18 +360,19 @@ class Platform(pygame.sprite.Sprite):
 
     def __init__(self, pos):
         super().__init__(platforms, all_sprites)
-        self.image = pygame.Surface((20, 10))
-        self.image.fill((65, 25, 0))
+        self.image = load_image('dirt.png')
         self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
 
 
 class Lemming(pygame.sprite.Sprite):
 
-    def __init__(self, pos):
+    def __init__(self, pos, sheet, columns, rows):
         super().__init__(heroes, all_sprites)
 
-        self.image = pygame.Surface((20, 20))
-        self.image.fill((0, 0, 255))
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
 
         self.work = False
         self.ground = False
@@ -376,14 +380,28 @@ class Lemming(pygame.sprite.Sprite):
         self.parach_used = False
         self.ground_kill = False
         self.hinder = False
+        self.povorot = False
         self.distance = 0
         self.x = 0
+
+        self.smena = 0
 
         self.rect = pygame.Rect(pos[0] * 20, pos[1] * 20, 20, 20)
         self.vx = 1
         self.vy = 2
 
     def update(self, x):
+        self.smena += x
+
+        if self.smena >= 7:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+            self.image = pygame.transform.scale(self.image, (20, 20))
+            if self.povorot:
+                self.image = pygame.transform.flip(self.image, True, False)
+
+            self.smena = 0
+
         if not self.rect.colliderect((0, 0, 800, 600)):
             self.kill()
             for elem in finish:
@@ -402,16 +420,32 @@ class Lemming(pygame.sprite.Sprite):
 
         if len(pygame.sprite.spritecollide(self, platforms, False)) >= 3:
             self.vx = -self.vx
+            if self.povorot:
+                self.povorot = False
+            else:
+                self.povorot = True
         elif len(pygame.sprite.spritecollide(self, platforms, False)) >= 1 and \
                 len(pygame.sprite.spritecollide(self, grass, False)) >= 1:
             self.vx = -self.vx
+            if self.povorot:
+                self.povorot = False
+            else:
+                self.povorot = True
         elif len(pygame.sprite.spritecollide(self, grass, False)) >= 3:
             self.rect = self.rect.move(self.vx, -10)
         elif len(pygame.sprite.spritecollide(self, hinders, False)) >= 3:
             self.vx = -self.vx
+            if self.povorot:
+                self.povorot = False
+            else:
+                self.povorot = True
         elif len(pygame.sprite.spritecollide(self, hinders, False)) >= 1 and \
                 len(pygame.sprite.spritecollide(self, grass, False)) >= 1:
             self.vx = -self.vx
+            if self.povorot:
+                self.povorot = False
+            else:
+                self.povorot = True
 
         if pygame.sprite.spritecollideany(self, finish):
             for elem in finish:
@@ -536,18 +570,58 @@ class Lemming(pygame.sprite.Sprite):
                 for elem in hinders_menu:
                     elem.change_count()
 
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
 
 class Start(pygame.sprite.Sprite):
 
-    def __init__(self, pos):
+    def __init__(self, pos, sheet, columns, rows):
         super().__init__(starts, all_sprites)
         self.pos = pos
-        self.image = pygame.Surface((20, 20))
-        self.image.fill((255, 0, 0))
-        self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 20)
+        self.image = pygame.Surface((41, 25))
+        self.rect = self.image.get_rect()
+        self.rect.x = pos[0] * 20
+        self.rect.y = pos[1] * 10
+
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+
+        self.smena = 0
+
+        self.stop = False
 
     def give_pos(self):
         return self.pos
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(self.rect[0], self.rect[1], sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self, x):
+        self.smena += x
+        if self.smena >= 10:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            if self.cur_frame == 0:
+                self.stop = True
+            if self.stop is False:
+                self.image = self.frames[self.cur_frame]
+                self.image = pygame.transform.scale(self.image, (50, 50))
+
+            self.smena = 0
 
 
 class Finish(pygame.sprite.Sprite):
@@ -593,8 +667,7 @@ class Grass(pygame.sprite.Sprite):
 
     def __init__(self, pos):
         super().__init__(grass, all_sprites)
-        self.image = pygame.Surface((20, 10))
-        self.image.fill((100, 255, 100))
+        self.image = load_image('grass.png')
         self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
 
 
@@ -638,7 +711,7 @@ class Boom_Menu(pygame.sprite.Sprite):
         super().__init__(booms_menu, all_sprites)
         self.image = load_image("boom.png")
         self.rect = self.image.get_rect()
-        self.rect.x = 650
+        self.rect.x = 400
         self.rect.y = 515
 
     def update(self):
@@ -670,15 +743,6 @@ class Parachute_Menu(pygame.sprite.Sprite):
 
     def change_count(self):
         self.count -= 1
-
-
-class Nothing(pygame.sprite.Sprite):
-
-    def __init__(self, pos):
-        super().__init__(nothings, all_sprites)
-        self.image = pygame.Surface((20, 10))
-        self.image.fill((0, 0, 0))
-        self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
 
 
 class Hinder_Menu(pygame.sprite.Sprite):
@@ -747,7 +811,7 @@ timing = 0
 
 clock = pygame.time.Clock()
 
-start_screen( )
+start_screen()
 
 generate_level(load_level("Level_1.txt"))
 play_level_first()
