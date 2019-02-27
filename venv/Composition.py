@@ -1,23 +1,25 @@
 import pygame
 import os
 import sys
+import random
 
 
 def start_screen():
     intro_text = ["ПРИВЕТ!", "",
                   "Правила игры:",
-                  "Передвигаться с помощью стрелок"]
+                  "Нужно довести леммингов до выхода",
+                  "Пользуйтесь способностями на нижней панели"]
 
-    fon = pygame.transform.scale(load_image('boom.png'), (5 * 20, 5 * 20))
+    fon = load_image('start_screen.png')
     screen.blit(fon, (0, 0))
     font = pygame.font.Font("C:/Windows/Fonts/Arial.ttf", 30)
-    text_coord = 50
+    text_coord = 150
     for line in intro_text:
-        string_rendered = font.render(line, 1, pygame.Color('black'))
+        string_rendered = font.render(line, 1, pygame.Color('gold'))
         intro_rect = string_rendered.get_rect()
         text_coord += 10
         intro_rect.top = text_coord
-        intro_rect.x = 10
+        intro_rect.x = 75
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
 
@@ -28,6 +30,45 @@ def start_screen():
             elif event.type == pygame.KEYDOWN or \
                     event.type == pygame.MOUSEBUTTONDOWN:
                 return
+        pygame.display.flip()
+        clock.tick(fps)
+
+
+def middle_screen():
+    fon = load_image('start_screen.png')
+    screen.blit(fon, (0, 0))
+
+    start = load_image('start_game.png')
+    screen.blit(start, (130, 110))
+
+    stop = load_image('quit_game.png')
+    screen.blit(stop, (250, 340))
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEMOTION:
+                if event.pos[0] in range(130, 631) and event.pos[1] in range(110, 244):
+                    start = load_image('start_game_chosen.png')
+                    screen.blit(start, (130, 110))
+                else:
+                    start = load_image('start_game.png')
+                    screen.blit(start, (130, 110))
+
+                if event.pos[0] in range(250, 497) and event.pos[1] in range(340, 463):
+                    stop = load_image('quit_game_chosen.png')
+                    screen.blit(stop, (250, 340))
+                else:
+                    stop = load_image('quit_game.png')
+                    screen.blit(stop, (250, 340))
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.pos[0] in range(250, 497) and event.pos[1] in range(340, 463):
+                    terminate()
+                if event.pos[0] in range(130, 631) and event.pos[1] in range(110, 244):
+                    return
+
         pygame.display.flip()
         clock.tick(fps)
 
@@ -115,7 +156,10 @@ def play_level_first():
                         Lemming((pos[0] + 1, pos[1]), load_image("lemmings.png", color_key=-1), 10, 1)
                     timing = 0
             starts.update(x)
+            bloods.update()
+            finish.update(x)
             heroes.update(x)
+            hinders.update(x)
             digger_menu.update()
             booms_menu.update()
             parachutes_menu.update()
@@ -137,6 +181,15 @@ def play_level_first():
                     heroes_count = 10
         else:
             terminate()
+
+
+def create_particles(position):
+    # количество создаваемых частиц
+    particle_count = 30
+    # возможные скорости
+    numbers = range(-4, 4)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
 
 
 def play_level_second():
@@ -291,7 +344,7 @@ def generate_level(level):
             elif level[y][x] == '1':
                 Start((x, y), load_image("start.png", color_key=-1), 1, 10)
             elif level[y][x] == '2':
-                Finish((x, y))
+                Finish((x, y), load_image("finish.png", color_key=-1), 1, 2)
             elif level[y][x] == '.':
                 Space((x, y))
             elif level[y][x] == '@':
@@ -371,8 +424,12 @@ class Lemming(pygame.sprite.Sprite):
 
         self.frames = []
         self.cut_sheet(sheet, columns, rows)
+        self.cut_sheet(load_image('falling.png', color_key=-1), 4, 1)
+        self.cut_sheet(load_image('falling_parachute_start.png', color_key=-1), 3, 1)
+        self.cut_sheet(load_image('falling_parachute_continue.png', color_key=-1), 5, 1)
+        self.cut_sheet(load_image('digger.png', color_key=-1), 8, 1)
         self.cur_frame = 0
-        self.image = self.frames[self.cur_frame]
+        self.image = self.frames[0][self.cur_frame]
 
         self.work = False
         self.ground = False
@@ -390,12 +447,17 @@ class Lemming(pygame.sprite.Sprite):
         self.vx = 1
         self.vy = 2
 
+        self.open = True
+
+        self.sound_effects = {'win': pygame.mixer.Sound('data/win.wav'),
+                              'lose': pygame.mixer.Sound('data/lose.wav')}
+
     def update(self, x):
         self.smena += x
 
-        if self.smena >= 7:
-            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-            self.image = self.frames[self.cur_frame]
+        if self.smena >= 7 and self.ground and self.work is False:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames[0])
+            self.image = self.frames[0][self.cur_frame]
             self.image = pygame.transform.scale(self.image, (20, 20))
             if self.povorot:
                 self.image = pygame.transform.flip(self.image, True, False)
@@ -403,11 +465,15 @@ class Lemming(pygame.sprite.Sprite):
             self.smena = 0
 
         if not self.rect.colliderect((0, 0, 800, 600)):
+            create_particles((self.rect[0], self.rect[1]))
+            self.sound_effects['lose'].play()
             self.kill()
             for elem in finish:
                 elem.minus_outer()
 
         if self.rect[1] + 20 >= 500:
+            create_particles((self.rect[0], self.rect[1]))
+            self.sound_effects['lose'].play()
             self.kill()
             for elem in finish:
                 elem.minus_outer()
@@ -451,11 +517,14 @@ class Lemming(pygame.sprite.Sprite):
             for elem in finish:
                 elem.plus_winner()
                 elem.minus_outer()
+            self.sound_effects['win'].play()
             self.kill()
         elif pygame.sprite.spritecollideany(self, platforms):
             if self.ground_kill:
                 for elem in finish:
                     elem.minus_outer()
+                create_particles((self.rect[0], self.rect[1]))
+                self.sound_effects['lose'].play()
                 self.kill()
 
             if self.parach_used:
@@ -466,6 +535,13 @@ class Lemming(pygame.sprite.Sprite):
             self.distance = 0
 
             if self.work:
+                if self.smena >= 7:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames[4])
+                    self.image = self.frames[4][self.cur_frame]
+                    self.image = pygame.transform.scale(self.image, (20, 20))
+
+                    self.smena = 0
+
                 self.x += x
                 if self.x > 250:
                     self.x = 0
@@ -480,6 +556,8 @@ class Lemming(pygame.sprite.Sprite):
 
             if self.parach_used:
                 self.parach = False
+            else:
+                self.open = True
 
             self.ground = True
 
@@ -490,16 +568,27 @@ class Lemming(pygame.sprite.Sprite):
             if self.ground_kill:
                 for elem in finish:
                     elem.minus_outer()
+                create_particles((self.rect[0], self.rect[1]))
+                self.sound_effects['lose'].play()
                 self.kill()
 
             if self.parach_used:
                 self.parach = False
+            else:
+                self.open = True
 
             self.ground = True
 
             self.distance = 0
 
             if self.work:
+                if self.smena >= 7:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames[4])
+                    self.image = self.frames[4][self.cur_frame]
+                    self.image = pygame.transform.scale(self.image, (20, 20))
+
+                    self.smena = 0
+
                 self.x += x
                 if self.x > 300:
                     self.x = 0
@@ -510,10 +599,33 @@ class Lemming(pygame.sprite.Sprite):
             self.ground = False
 
             if self.parach is False or self.distance < 150:
+                if self.smena >= 7:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames[1])
+                    self.image = self.frames[1][self.cur_frame]
+                    self.image = pygame.transform.scale(self.image, (20, 20))
+
+                    self.smena = 0
+
                 self.rect = self.rect.move(0, self.vy)
                 self.distance += self.vy
 
             if self.parach and self.distance >= 150:
+                if self.smena >= 7 and self.open:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames[2])
+                    self.image = self.frames[2][self.cur_frame]
+                    self.image = pygame.transform.scale(self.image, (20, 20))
+
+                    self.smena = 0
+
+                    if self.cur_frame == 0:
+                        self.open = False
+                if self.smena >= 20 and self.open is False:
+                    self.cur_frame = (self.cur_frame + 1) % len(self.frames[3])
+                    self.image = self.frames[3][self.cur_frame]
+                    self.image = pygame.transform.scale(self.image, (20, 20))
+
+                    self.smena = 0
+
                 self.rect = self.rect.move(0, 1)
                 self.parach_used = True
                 self.ground_kill = False
@@ -573,11 +685,12 @@ class Lemming(pygame.sprite.Sprite):
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
                                 sheet.get_height() // rows)
+
+        self.frames.append([])
         for j in range(rows):
             for i in range(columns):
                 frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
+                self.frames[len(self.frames) - 1].append(sheet.subsurface(pygame.Rect(frame_location, self.rect.size)))
 
 
 class Start(pygame.sprite.Sprite):
@@ -619,21 +732,29 @@ class Start(pygame.sprite.Sprite):
                 self.stop = True
             if self.stop is False:
                 self.image = self.frames[self.cur_frame]
-                self.image = pygame.transform.scale(self.image, (50, 50))
 
             self.smena = 0
 
 
 class Finish(pygame.sprite.Sprite):
 
-    def __init__(self, pos):
+    def __init__(self, pos, sheet, columns, rows):
         super().__init__(finish, all_sprites)
-        self.pos = pos
         self.winners = 0
         self.outers = 10
-        self.image = pygame.Surface((20, 20))
-        self.image.fill((0, 255, 0))
-        self.rect = pygame.Rect(pos[0] * 20, pos[1] * 9.4, 20, 20)
+
+        self.image = pygame.Surface((33, 25))
+        self.rect = self.image.get_rect()
+        self.rect.x = pos[0] * 19.5
+        self.rect.y = pos[1] * 9.6
+
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+
+        self.pos = pos
+        self.smena = 0
 
     def give_pos(self):
         return self.pos
@@ -649,6 +770,23 @@ class Finish(pygame.sprite.Sprite):
 
     def show_outers(self):
         return self.outers
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(self.rect[0], self.rect[1], sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self, x):
+        self.smena += x
+        if self.smena >= 10:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+
+            self.smena = 0
 
 
 class Space(pygame.sprite.Sprite):
@@ -769,13 +907,72 @@ class Hinder_Menu(pygame.sprite.Sprite):
         self.count -= 1
 
 
+class Particle(pygame.sprite.Sprite):
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites, bloods)
+        # сгенерируем частицы разного размера
+        self.fire = [load_image("blood.png")]
+        for scale in (5, 7, 10):
+            self.fire.append(pygame.transform.scale(self.fire[0], (scale, scale)))
+
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+
+        # у каждой частицы своя скорость — это вектор
+        self.velocity = [dx, dy]
+        # и свои координаты
+        self.rect.x, self.rect.y = pos
+
+        # гравитация будет одинаковой (значение константы)
+        self.gravity = 0.2
+
+    def update(self):
+        # применяем гравитационный эффект:
+        # движение с ускорением под действием гравитации
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
+
+
 class Hinder(pygame.sprite.Sprite):
 
     def __init__(self, pos):
         super().__init__(hinders, all_sprites)
+
         self.image = pygame.Surface((20, 20))
-        self.image.fill((255, 255, 255))
-        self.rect = pygame.Rect(pos[0], pos[1], 20, 20)
+        self.rect = self.image.get_rect()
+        self.rect.x = pos[0]
+        self.rect.y = pos[1]
+
+        self.frames = []
+        self.cut_sheet(load_image('hind.png', color_key=-1), 16, 1)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+
+        self.smena = 0
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(self.rect[0], self.rect[1], sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self, x):
+        self.smena += x
+        if self.smena >= 10:
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+            self.image = pygame.transform.scale(self.image, (20, 20))
+
+            self.smena = 0
 
 
 pygame.init()
@@ -784,6 +981,7 @@ width = 800
 height = 600
 size = width, height
 screen = pygame.display.set_mode(size)
+screen_rect = (0, 0, width, height)
 
 all_sprites = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
@@ -799,6 +997,7 @@ parachutes_menu = pygame.sprite.Group()
 nothings = pygame.sprite.Group()
 hinders_menu = pygame.sprite.Group()
 hinders = pygame.sprite.Group()
+bloods = pygame.sprite.Group()
 
 to_dig = False
 to_boom = False
@@ -811,7 +1010,12 @@ timing = 0
 
 clock = pygame.time.Clock()
 
+music = pygame.mixer.music.load('data/main_theme.wav')
+pygame.mixer.music.play(-1, 0.0)
+
 start_screen()
+
+middle_screen()
 
 generate_level(load_level("Level_1.txt"))
 play_level_first()
