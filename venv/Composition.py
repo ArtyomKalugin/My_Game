@@ -73,6 +73,64 @@ def middle_screen():
         clock.tick(fps)
 
 
+def after_level(inners, boom=False, level=1):
+    replay = False
+
+    if boom is False:
+        if inners > 0:
+            intro_text = ["ИТОГ", "",
+                          "Вы спасли: " + str(inners * 10) + '%',
+                          "Погибло: " + str((10 - inners) * 10) + '%',
+                          "Для продолжения нажмите на л.к.м",
+                          "Для выхода нажмите на п.к.м"]
+        else:
+            intro_text = ["ИТОГ", "",
+                          "Вы спасли: " + str(inners * 10) + '%',
+                          "Погибло: " + str((10 - inners) * 10) + '%',
+                          "Чтобы переиграть нажмите на л.к.м",
+                          "Для выхода нажмите на п.к.м"]
+
+            replay = True
+    else:
+        intro_text = ["ИТОГ", "",
+                      'Вы всех взорвали!',
+                      "Чтобы переиграть нажмите на л.к.м",
+                      "Для выхода нажмите на п.к.м"]
+
+        replay = True
+
+    fon = load_image('start_screen.png')
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font("C:/Windows/Fonts/Arial.ttf", 30)
+    text_coord = 150
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('gold'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 75
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 3:
+                    terminate()
+                if event.button == 1:
+                    if replay:
+                        generate_level(load_level("Level_1.txt"))
+                        play_level_first()
+                        return
+                    else:
+                        return
+
+        pygame.display.flip()
+        clock.tick(fps)
+
+
 def play_level_first():
     global to_dig, to_parachute, to_boom, to_hinder, v, fps, timing
 
@@ -101,7 +159,10 @@ def play_level_first():
                     sprite.hinderer(event.pos)
 
                 if event.pos[0] in range(400, 480) and event.pos[1] in range(515, 595):
-                    to_boom = True
+                    if to_boom:
+                        to_boom = False
+                    else:
+                        to_boom = True
 
                     to_dig = False
                     to_parachute = False
@@ -139,8 +200,11 @@ def play_level_first():
 
         for f in finish:
             if f.show_outers() == 0:
+                for q in finish:
+                    winners = q.show_winners()
                 for sprite in all_sprites:
                     sprite.kill()
+                after_level(winners, level=1)
                 return
 
         if time > 0:
@@ -176,9 +240,11 @@ def play_level_first():
             clock.tick(fps)
 
             if to_boom:
-                for sprites in heroes:
-                    sprites.kill()
-                    heroes_count = 10
+                to_boom = False
+                for sprite in all_sprites:
+                    sprite.kill()
+                after_level(0, boom=True, level=1)
+                return
         else:
             terminate()
 
@@ -193,112 +259,7 @@ def create_particles(position):
 
 
 def play_level_second():
-    global to_dig, to_parachute, to_boom, to_hinder, v, fps, timing
-
-    Menu()
-    Dig_Menu()
-    Boom_Menu()
-    Parachute_Menu()
-    Hinder_Menu()
-
-    time = 120
-    heroes_count = 0
-    timing = 0
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                for sprite in heroes:
-                    sprite.dig(event.pos)
-
-                for sprite in heroes:
-                    sprite.parachute(event.pos)
-
-                for sprite in heroes:
-                    sprite.hinderer(event.pos)
-
-                if event.pos[0] in range(400, 480) and event.pos[1] in range(515, 595):
-                    to_boom = True
-
-                    to_dig = False
-                    to_parachute = False
-                    to_hinder = False
-
-                if event.pos[0] in range(100, 180) and event.pos[1] in range(515, 565):
-                    if to_dig:
-                        to_dig = False
-                    else:
-                        to_dig = True
-
-                    to_boom = False
-                    to_parachute = False
-                    to_hinder = False
-
-                elif event.pos[0] in range(200, 280) and event.pos[1] in range(515, 595):
-                    if to_parachute:
-                        to_parachute = False
-                    else:
-                        to_parachute = True
-
-                    to_boom = False
-                    to_dig = False
-                    to_hinder = False
-
-                elif event.pos[0] in range(300, 380) and event.pos[1] in range(515, 595):
-                    if to_hinder:
-                        to_hinder = False
-                    else:
-                        to_hinder = True
-
-                    to_boom = False
-                    to_dig = False
-                    to_parachute = False
-
-        if len(heroes) == 0:
-            if heroes_count >= 10:
-                for sprite in all_sprites:
-                    sprite.kill()
-                return True
-
-        if time > 0:
-            screen.fill((0, 0, 0))
-            x = v / fps
-            timing += x
-
-            if timing > 250:
-                heroes_count += 1
-                if heroes_count <= 10:
-                    for elem in starts:
-                        pos = elem.give_pos()
-                        Lemming(pos)
-                    timing = 0
-
-            heroes.update(x)
-            digger_menu.update()
-            booms_menu.update()
-            parachutes_menu.update()
-            hinders_menu.update()
-            starts.update(x)
-
-            time -= 0.01
-
-            all_sprites.draw(screen)
-
-            draw_count()
-            show_time(int(time))
-
-            pygame.display.flip()
-            clock.tick(fps)
-
-            if to_boom:
-                for sprites in heroes:
-                    sprites.kill()
-                    heroes_count = 10
-        else:
-            terminate()
+   pass
 
 
 def load_level(filename):
@@ -340,7 +301,7 @@ def generate_level(level):
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '#':
-                Platform((x, y))
+                Platform((x, y), 'dirt')
             elif level[y][x] == '1':
                 Start((x, y), load_image("start.png", color_key=-1), 1, 10)
             elif level[y][x] == '2':
@@ -348,7 +309,7 @@ def generate_level(level):
             elif level[y][x] == '.':
                 Space((x, y))
             elif level[y][x] == '@':
-                Grass((x, y))
+                Platform((x, y), 'grass')
     return x, y
 
 
@@ -411,16 +372,26 @@ def show_time(time):
 
 class Platform(pygame.sprite.Sprite):
 
-    def __init__(self, pos):
+    def __init__(self, pos, name):
         super().__init__(platforms, all_sprites)
-        self.image = load_image('dirt.png')
-        self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
+        if name == 'dirt':
+            self.image = load_image('dirt.png')
+            self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
+        elif name == 'grass':
+            self.image = load_image('grass.png')
+            self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
 
 
 class Lemming(pygame.sprite.Sprite):
 
     def __init__(self, pos, sheet, columns, rows):
         super().__init__(heroes, all_sprites)
+
+        self.sound_effects = {'win': pygame.mixer.Sound('data/win.wav'),
+                              'lose': pygame.mixer.Sound('data/lose.wav'),
+                              'dig': pygame.mixer.Sound('data/dig.wav'),
+                              'spawn': pygame.mixer.Sound('data/spawn.wav')}
+        self.sound_effects['spawn'].play()
 
         self.frames = []
         self.cut_sheet(sheet, columns, rows)
@@ -448,9 +419,6 @@ class Lemming(pygame.sprite.Sprite):
         self.vy = 2
 
         self.open = True
-
-        self.sound_effects = {'win': pygame.mixer.Sound('data/win.wav'),
-                              'lose': pygame.mixer.Sound('data/lose.wav')}
 
     def update(self, x):
         self.smena += x
@@ -484,20 +452,13 @@ class Lemming(pygame.sprite.Sprite):
             for elem in finish:
                 elem.minus_outer()
 
-        if len(pygame.sprite.spritecollide(self, platforms, False)) >= 3:
+        if len(pygame.sprite.spritecollide(self, platforms, False)) >= 4:
             self.vx = -self.vx
             if self.povorot:
                 self.povorot = False
             else:
                 self.povorot = True
-        elif len(pygame.sprite.spritecollide(self, platforms, False)) >= 1 and \
-                len(pygame.sprite.spritecollide(self, grass, False)) >= 1:
-            self.vx = -self.vx
-            if self.povorot:
-                self.povorot = False
-            else:
-                self.povorot = True
-        elif len(pygame.sprite.spritecollide(self, grass, False)) >= 3:
+        elif len(pygame.sprite.spritecollide(self, platforms, False)) >= 3:
             self.rect = self.rect.move(self.vx, -10)
         elif len(pygame.sprite.spritecollide(self, hinders, False)) >= 3:
             self.vx = -self.vx
@@ -506,7 +467,7 @@ class Lemming(pygame.sprite.Sprite):
             else:
                 self.povorot = True
         elif len(pygame.sprite.spritecollide(self, hinders, False)) >= 1 and \
-                len(pygame.sprite.spritecollide(self, grass, False)) >= 1:
+                len(pygame.sprite.spritecollide(self, platforms, False)) >= 1:
             self.vx = -self.vx
             if self.povorot:
                 self.povorot = False
@@ -546,6 +507,7 @@ class Lemming(pygame.sprite.Sprite):
                 if self.x > 250:
                     self.x = 0
                     pygame.sprite.spritecollide(self, platforms, True)
+                    self.sound_effects['dig'].play()
             else:
                 self.rect = self.rect.move(self.vx, 0)
         elif pygame.sprite.spritecollideany(self, hinders):
@@ -564,37 +526,6 @@ class Lemming(pygame.sprite.Sprite):
             self.distance = 0
 
             self.rect = self.rect.move(self.vx, 0)
-        elif pygame.sprite.spritecollideany(self, grass):
-            if self.ground_kill:
-                for elem in finish:
-                    elem.minus_outer()
-                create_particles((self.rect[0], self.rect[1]))
-                self.sound_effects['lose'].play()
-                self.kill()
-
-            if self.parach_used:
-                self.parach = False
-            else:
-                self.open = True
-
-            self.ground = True
-
-            self.distance = 0
-
-            if self.work:
-                if self.smena >= 7:
-                    self.cur_frame = (self.cur_frame + 1) % len(self.frames[4])
-                    self.image = self.frames[4][self.cur_frame]
-                    self.image = pygame.transform.scale(self.image, (20, 20))
-
-                    self.smena = 0
-
-                self.x += x
-                if self.x > 300:
-                    self.x = 0
-                    pygame.sprite.spritecollide(self, grass, True)
-            else:
-                self.rect = self.rect.move(self.vx, 0)
         else:
             self.ground = False
 
@@ -799,14 +730,6 @@ class Space(pygame.sprite.Sprite):
 
     def give_pos(self):
         return self.rect
-
-
-class Grass(pygame.sprite.Sprite):
-
-    def __init__(self, pos):
-        super().__init__(grass, all_sprites)
-        self.image = load_image('grass.png')
-        self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
 
 
 class Menu(pygame.sprite.Sprite):
