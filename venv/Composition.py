@@ -4,11 +4,13 @@ import sys
 import random
 
 
+# Начальный экран, где объясняются правила
 def start_screen():
     intro_text = ["ПРИВЕТ!", "",
                   "Правила игры:",
                   "Нужно довести леммингов до выхода",
-                  "Пользуйтесь способностями на нижней панели"]
+                  "Пользуйтесь способностями на нижней панели",
+                  "Для продолжения нажмите на любую клавишу"]
 
     fon = load_image('start_screen.png')
     screen.blit(fon, (0, 0))
@@ -23,6 +25,7 @@ def start_screen():
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
 
+    # Собственный цикл, где ожидается нажатие любой клавиши
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -34,6 +37,7 @@ def start_screen():
         clock.tick(fps)
 
 
+# Экран, который появляется после правил
 def middle_screen():
     fon = load_image('start_screen.png')
     screen.blit(fon, (0, 0))
@@ -44,6 +48,7 @@ def middle_screen():
     stop = load_image('quit_game.png')
     screen.blit(stop, (250, 340))
 
+    # Собственный цикл, ожидающий нажатие на один из пунктов
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -73,8 +78,9 @@ def middle_screen():
         clock.tick(fps)
 
 
-def after_level(inners, boom=False, level=1):
-    replay = False
+# Экран, который появляется между уровнями, сообщает различную информацию по уровню
+def after_level(inners, boom=False, level=1, time=False):
+    replay = False  # Переиграть
 
     if boom is False:
         if inners > 0:
@@ -91,6 +97,19 @@ def after_level(inners, boom=False, level=1):
                           "Для выхода нажмите на п.к.м"]
 
             replay = True
+
+        if level == 3 and inners > 0:
+            intro_text = ["УРА!", "",
+                          "Вы прошли игру!",
+                          "Для выхода нажмите на п.к.м"]
+        if time:
+            intro_text = ["ИТОГ", "",
+                          'Время вышло!',
+                          "Чтобы переиграть нажмите на л.к.м",
+                          "Для выхода нажмите на п.к.м"]
+
+            replay = True
+
     else:
         intro_text = ["ИТОГ", "",
                       'Вы всех взорвали!',
@@ -121,9 +140,18 @@ def after_level(inners, boom=False, level=1):
                     terminate()
                 if event.button == 1:
                     if replay:
-                        generate_level(load_level("Level_1.txt"))
-                        play_level_first()
-                        return
+                        if level == 1:
+                            generate_level(load_level("Level_1.txt"))
+                            play_level_first()
+                            return
+                        if level == 2:
+                            generate_level(load_level("Level_2.txt"))
+                            play_level_second()
+                            return
+                        if level == 3:
+                            generate_level(load_level("Level_3.txt"))
+                            play_level_third()
+                            return
                     else:
                         return
 
@@ -131,6 +159,7 @@ def after_level(inners, boom=False, level=1):
         clock.tick(fps)
 
 
+# Здесь содержится игровой цикл первого уровня
 def play_level_first():
     global to_dig, to_parachute, to_boom, to_hinder, v, fps, timing
 
@@ -140,10 +169,11 @@ def play_level_first():
     Parachute_Menu()
     Hinder_Menu()
 
-    time = 60
+    time = 40   # Для каждого уровня разное отведенное время
     heroes_count = 0
 
     while True:
+        # Разбираются события
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
@@ -246,9 +276,13 @@ def play_level_first():
                 after_level(0, boom=True, level=1)
                 return
         else:
-            terminate()
+            for sprite in all_sprites:
+                sprite.kill()
+            after_level(0, time=True, level=1)
+            return
 
 
+# Создает частички крови
 def create_particles(position):
     # количество создаваемых частиц
     particle_count = 30
@@ -258,10 +292,252 @@ def create_particles(position):
         Particle(position, random.choice(numbers), random.choice(numbers))
 
 
+# Игровой цикл второго уровня
 def play_level_second():
-   pass
+    global to_dig, to_parachute, to_boom, to_hinder, v, fps, timing
+
+    Menu()
+    Dig_Menu()
+    Boom_Menu()
+    Parachute_Menu()
+    Hinder_Menu()
+
+    time = 40
+    heroes_count = 0
+
+    while True:
+        # Разбираются события
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for sprite in heroes:
+                    sprite.dig(event.pos)
+
+                for sprite in heroes:
+                    sprite.parachute(event.pos)
+
+                for sprite in heroes:
+                    sprite.hinderer(event.pos)
+
+                if event.pos[0] in range(400, 480) and event.pos[1] in range(515, 595):
+                    if to_boom:
+                        to_boom = False
+                    else:
+                        to_boom = True
+
+                    to_dig = False
+                    to_parachute = False
+                    to_hinder = False
+
+                if event.pos[0] in range(100, 180) and event.pos[1] in range(515, 565):
+                    if to_dig:
+                        to_dig = False
+                    else:
+                        to_dig = True
+
+                    to_boom = False
+                    to_parachute = False
+                    to_hinder = False
+
+                elif event.pos[0] in range(200, 280) and event.pos[1] in range(515, 595):
+                    if to_parachute:
+                        to_parachute = False
+                    else:
+                        to_parachute = True
+
+                    to_boom = False
+                    to_dig = False
+                    to_hinder = False
+
+                elif event.pos[0] in range(300, 380) and event.pos[1] in range(515, 595):
+                    if to_hinder:
+                        to_hinder = False
+                    else:
+                        to_hinder = True
+
+                    to_boom = False
+                    to_dig = False
+                    to_parachute = False
+
+        for f in finish:
+            if f.show_outers() == 0:
+                for q in finish:
+                    winners = q.show_winners()
+                for sprite in all_sprites:
+                    sprite.kill()
+                after_level(winners, level=2)
+                return
+
+        if time > 0:
+            screen.fill((0, 0, 0))
+            x = v / fps
+            timing += x
+
+            if timing > 250:
+                heroes_count += 1
+                if heroes_count <= 10:
+                    for elem in starts:
+                        pos = elem.give_pos()
+                        Lemming((pos[0] + 1, pos[1]), load_image("lemmings.png", color_key=-1), 10, 1)
+                    timing = 0
+            starts.update(x)
+            bloods.update()
+            finish.update(x)
+            heroes.update(x)
+            hinders.update(x)
+            digger_menu.update()
+            booms_menu.update()
+            parachutes_menu.update()
+            hinders_menu.update()
+
+            time -= 0.01
+
+            all_sprites.draw(screen)
+
+            draw_count()
+            show_time(int(time))
+
+            pygame.display.flip()
+            clock.tick(fps)
+
+            if to_boom:
+                to_boom = False
+                for sprite in all_sprites:
+                    sprite.kill()
+                after_level(0, boom=True, level=2)
+                return
+        else:
+            for sprite in all_sprites:
+                sprite.kill()
+            after_level(0, time=True, level=2)
+            return
 
 
+# Игровой цикл третьего уровня
+def play_level_third():
+    global to_dig, to_parachute, to_boom, to_hinder, v, fps, timing
+
+    Menu()
+    Dig_Menu()
+    Boom_Menu()
+    Parachute_Menu()
+    Hinder_Menu()
+
+    time = 40
+    heroes_count = 0
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for sprite in heroes:
+                    sprite.dig(event.pos)
+
+                for sprite in heroes:
+                    sprite.parachute(event.pos)
+
+                for sprite in heroes:
+                    sprite.hinderer(event.pos)
+
+                if event.pos[0] in range(400, 480) and event.pos[1] in range(515, 595):
+                    if to_boom:
+                        to_boom = False
+                    else:
+                        to_boom = True
+
+                    to_dig = False
+                    to_parachute = False
+                    to_hinder = False
+
+                if event.pos[0] in range(100, 180) and event.pos[1] in range(515, 565):
+                    if to_dig:
+                        to_dig = False
+                    else:
+                        to_dig = True
+
+                    to_boom = False
+                    to_parachute = False
+                    to_hinder = False
+
+                elif event.pos[0] in range(200, 280) and event.pos[1] in range(515, 595):
+                    if to_parachute:
+                        to_parachute = False
+                    else:
+                        to_parachute = True
+
+                    to_boom = False
+                    to_dig = False
+                    to_hinder = False
+
+                elif event.pos[0] in range(300, 380) and event.pos[1] in range(515, 595):
+                    if to_hinder:
+                        to_hinder = False
+                    else:
+                        to_hinder = True
+
+                    to_boom = False
+                    to_dig = False
+                    to_parachute = False
+
+        for f in finish:
+            if f.show_outers() == 0:
+                for q in finish:
+                    winners = q.show_winners()
+                for sprite in all_sprites:
+                    sprite.kill()
+                after_level(winners, level=3)
+                return
+
+        if time > 0:
+            screen.fill((0, 0, 0))
+            x = v / fps
+            timing += x
+
+            if timing > 250:
+                heroes_count += 1
+                if heroes_count <= 10:
+                    for elem in starts:
+                        pos = elem.give_pos()
+                        Lemming((pos[0] + 1, pos[1]), load_image("lemmings.png", color_key=-1), 10, 1)
+                    timing = 0
+            starts.update(x)
+            bloods.update()
+            finish.update(x)
+            heroes.update(x)
+            hinders.update(x)
+            digger_menu.update()
+            booms_menu.update()
+            parachutes_menu.update()
+            hinders_menu.update()
+
+            time -= 0.01
+
+            all_sprites.draw(screen)
+
+            draw_count()
+            show_time(int(time))
+
+            pygame.display.flip()
+            clock.tick(fps)
+
+            if to_boom:
+                to_boom = False
+                for sprite in all_sprites:
+                    sprite.kill()
+                after_level(0, boom=True, level=3)
+                return
+        else:
+            for sprite in all_sprites:
+                sprite.kill()
+            after_level(0, time=True, level=3)
+            return
+
+
+# Загрузка уровня из блокнота
 def load_level(filename):
     try:
         filename = "data/" + filename
@@ -276,7 +552,9 @@ def load_level(filename):
         raise SystemExit(message)
 
 
+# Загрузка изображений
 def load_image(name, color_key=None):
+    # Если color_key=-1, то у фотографии вырезается фон
     fullname = os.path.join('data', name)
     try:
         image = pygame.image.load(fullname)
@@ -291,11 +569,13 @@ def load_image(name, color_key=None):
     return image
 
 
+# Критический выход
 def terminate():
     pygame.quit()
     sys.exit()
 
 
+# Создание уровня
 def generate_level(level):
     x, y = None, None
     for y in range(len(level)):
@@ -313,6 +593,7 @@ def generate_level(level):
     return x, y
 
 
+# Отображает различную информацию на панели
 def draw_count():
     for f in finish:
         count = f.show_outers()
@@ -360,6 +641,7 @@ def draw_count():
         screen.blit(text, (text_x, text_y))
 
 
+# Показывает оставшееся время
 def show_time(time):
     font = pygame.font.Font("C:/Windows/Fonts/Arial.ttf", 50)
     text = font.render('TIME ' + str(time), 1, (100, 255, 100))
@@ -370,6 +652,7 @@ def show_time(time):
     screen.blit(text, (text_x, text_y))
 
 
+# Класс платформы
 class Platform(pygame.sprite.Sprite):
 
     def __init__(self, pos, name):
@@ -382,11 +665,13 @@ class Platform(pygame.sprite.Sprite):
             self.rect = pygame.Rect(pos[0] * 20, pos[1] * 10, 20, 10)
 
 
+# Класс самого лемминга
 class Lemming(pygame.sprite.Sprite):
 
     def __init__(self, pos, sheet, columns, rows):
         super().__init__(heroes, all_sprites)
 
+        # Здесь хранятся все звуковые эффекты
         self.sound_effects = {'win': pygame.mixer.Sound('data/win.wav'),
                               'lose': pygame.mixer.Sound('data/lose.wav'),
                               'dig': pygame.mixer.Sound('data/dig.wav'),
@@ -421,6 +706,7 @@ class Lemming(pygame.sprite.Sprite):
         self.open = True
 
     def update(self, x):
+        # Сложное поведение лемминга
         self.smena += x
 
         if self.smena >= 7 and self.ground and self.work is False:
@@ -527,6 +813,9 @@ class Lemming(pygame.sprite.Sprite):
 
             self.rect = self.rect.move(self.vx, 0)
         else:
+            if self.distance >= 20:
+                self.work = False
+
             self.ground = False
 
             if self.parach is False or self.distance < 150:
@@ -571,6 +860,7 @@ class Lemming(pygame.sprite.Sprite):
                                                                                             self.rect[1] + 20):
                         self.work = False
 
+    # Функция копания
     def dig(self, pos):
         count = None
 
@@ -585,6 +875,7 @@ class Lemming(pygame.sprite.Sprite):
                 for elem in digger_menu:
                     elem.change_count()
 
+    # Функция парашюта
     def parachute(self, pos):
         count = None
 
@@ -599,6 +890,7 @@ class Lemming(pygame.sprite.Sprite):
                 for elem in parachutes_menu:
                     elem.change_count()
 
+    # Функция помехи
     def hinderer(self, pos):
         count = None
 
@@ -613,6 +905,7 @@ class Lemming(pygame.sprite.Sprite):
                 for elem in hinders_menu:
                     elem.change_count()
 
+    # Функция разрезки листа спрайта
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
                                 sheet.get_height() // rows)
@@ -624,6 +917,7 @@ class Lemming(pygame.sprite.Sprite):
                 self.frames[len(self.frames) - 1].append(sheet.subsurface(pygame.Rect(frame_location, self.rect.size)))
 
 
+# Класс старта
 class Start(pygame.sprite.Sprite):
 
     def __init__(self, pos, sheet, columns, rows):
@@ -667,6 +961,7 @@ class Start(pygame.sprite.Sprite):
             self.smena = 0
 
 
+# Класс финиша, до которого необходимо дойти
 class Finish(pygame.sprite.Sprite):
 
     def __init__(self, pos, sheet, columns, rows):
@@ -720,6 +1015,7 @@ class Finish(pygame.sprite.Sprite):
             self.smena = 0
 
 
+# Класс пустого места
 class Space(pygame.sprite.Sprite):
 
     def __init__(self, pos):
@@ -732,6 +1028,7 @@ class Space(pygame.sprite.Sprite):
         return self.rect
 
 
+# Класс панели
 class Menu(pygame.sprite.Sprite):
 
     def __init__(self):
@@ -742,6 +1039,7 @@ class Menu(pygame.sprite.Sprite):
         self.rect.y = 500
 
 
+# Класс действия копания, отображаемого на панели
 class Dig_Menu(pygame.sprite.Sprite):
 
     def __init__(self):
@@ -766,6 +1064,7 @@ class Dig_Menu(pygame.sprite.Sprite):
         self.count -= 1
 
 
+# Класс действия взрыва, отображаемого на панели
 class Boom_Menu(pygame.sprite.Sprite):
 
     def __init__(self):
@@ -782,6 +1081,7 @@ class Boom_Menu(pygame.sprite.Sprite):
             self.image = load_image("boom.png")
 
 
+# Класс парашюта, отображаемого на панели
 class Parachute_Menu(pygame.sprite.Sprite):
 
     def __init__(self):
@@ -806,6 +1106,7 @@ class Parachute_Menu(pygame.sprite.Sprite):
         self.count -= 1
 
 
+# Класс помехи, отображаемой на панели
 class Hinder_Menu(pygame.sprite.Sprite):
 
     def __init__(self):
@@ -830,6 +1131,7 @@ class Hinder_Menu(pygame.sprite.Sprite):
         self.count -= 1
 
 
+# Класс частиц крови
 class Particle(pygame.sprite.Sprite):
 
     def __init__(self, pos, dx, dy):
@@ -862,6 +1164,7 @@ class Particle(pygame.sprite.Sprite):
             self.kill()
 
 
+# Класс помехи
 class Hinder(pygame.sprite.Sprite):
 
     def __init__(self, pos):
@@ -900,12 +1203,14 @@ class Hinder(pygame.sprite.Sprite):
 
 pygame.init()
 
+# Настройка окна
 width = 800
 height = 600
 size = width, height
 screen = pygame.display.set_mode(size)
 screen_rect = (0, 0, width, height)
 
+# Все группы спрайтов
 all_sprites = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
 heroes = pygame.sprite.Group()
@@ -914,7 +1219,6 @@ finish = pygame.sprite.Group()
 spaces = pygame.sprite.Group()
 panel = pygame.sprite.Group()
 digger_menu = pygame.sprite.Group()
-grass = pygame.sprite.Group()
 booms_menu = pygame.sprite.Group()
 parachutes_menu = pygame.sprite.Group()
 nothings = pygame.sprite.Group()
@@ -922,6 +1226,7 @@ hinders_menu = pygame.sprite.Group()
 hinders = pygame.sprite.Group()
 bloods = pygame.sprite.Group()
 
+# Глобальные переменные
 to_dig = False
 to_boom = False
 to_parachute = False
@@ -933,9 +1238,11 @@ timing = 0
 
 clock = pygame.time.Clock()
 
+# Проигрывает фоновую музыку
 music = pygame.mixer.music.load('data/main_theme.wav')
 pygame.mixer.music.play(-1, 0.0)
 
+# Непосредственно запуск игры и т.д.
 start_screen()
 
 middle_screen()
@@ -945,5 +1252,9 @@ play_level_first()
 
 generate_level(load_level("Level_2.txt"))
 play_level_second()
+
+generate_level(load_level("Level_3.txt"))
+play_level_third()
+
 
 pygame.quit()
